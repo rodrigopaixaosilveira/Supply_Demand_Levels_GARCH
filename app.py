@@ -1,70 +1,46 @@
+# app.py
 import streamlit as st
 import yfinance as yf
-import plotly.graph_objs as go
+import plotly.graph_objects as go
+from datetime import datetime, timedelta
 
-st.set_page_config(page_title="📈 Stock OHLC Viewer", layout="wide")
-st.title("📊 Stock OHLC Chart Viewer")
+# Título do app
+st.title("Gráfico OHLC de Ativos")
 
-# Sidebar: Market selection
-market = st.sidebar.selectbox(
-    "Select Market",
-    ["US Market", "Indian Market", "Crypto"]
-)
+# Lista de ativos (exemplos)
+ativos = ['AAPL', 'GOOGL', 'MSFT', 'BTC-USD', 'ETH-USD']
+ativo_selecionado = st.selectbox("Selecione o ativo:", ativos)
 
-if market == "US Market":
-    default_tickers = ["AAPL", "MSFT", "GOOGL", "TSLA"]
-elif market == "Indian Market":
-    default_tickers = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "TATASTEEL.NS"]
+# Período de dados
+dias = st.slider("Quantidade de dias:", min_value=7, max_value=365, value=30)
+data_final = datetime.today()
+data_inicial = data_final - timedelta(days=dias)
+
+# Baixando dados do ativo
+dados = yf.download(ativo_selecionado, start=data_inicial, end=data_final)
+
+# Verificar se há dados
+if dados.empty:
+    st.warning("Não foi possível obter os dados do ativo selecionado.")
 else:
-    default_tickers = ["BTC-USD", "ETH-USD", "DOGE-USD"]
+    # Criando gráfico OHLC
+    fig = go.Figure(data=[go.Ohlc(
+        x=dados.index,
+        open=dados['Open'],
+        high=dados['High'],
+        low=dados['Low'],
+        close=dados['Close'],
+        increasing_line_color='green',
+        decreasing_line_color='red',
+        name=ativo_selecionado
+    )])
 
-# Sidebar: Select single ticker
-ticker = st.sidebar.selectbox(
-    "Select Ticker",
-    options=default_tickers
-)
+    fig.update_layout(
+        title=f"Gráfico OHLC - {ativo_selecionado}",
+        xaxis_title="Data",
+        yaxis_title="Preço",
+        xaxis_rangeslider_visible=False
+    )
 
-# Sidebar: Time controls
-period = st.sidebar.selectbox(
-    "Select Period",
-    ["1mo", "3mo", "6mo", "1y", "2y", "5y", "max"],
-    index=1
-)
-interval = st.sidebar.selectbox(
-    "Select Interval",
-    ["1d", "1wk", "1mo"],
-    index=0
-)
-
-# Fetch data
-try:
-    df = yf.download(ticker, period=period, interval=interval, progress=False)
-
-    if df.empty:
-        st.error("⚠️ No data found. Try different ticker or period/interval.")
-    else:
-        # OHLC Chart
-        fig = go.Figure(data=[go.Ohlc(
-            x=df.index,
-            open=df['Open'],
-            high=df['High'],
-            low=df['Low'],
-            close=df['Close'],
-            increasing_line_color='green',
-            decreasing_line_color='red',
-            name=ticker
-        )])
-
-        fig.update_layout(
-            title=f"OHLC Chart for {ticker}",
-            xaxis_title="Date",
-            yaxis_title="Price",
-            template="plotly_dark",
-            hovermode='x unified',
-            xaxis_rangeslider_visible=False
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-except Exception as e:
-    st.error(f"❌ Error fetching data: {e}")
+    # Mostrar gráfico
+    st.plotly_chart(fig, use_container_width=True)
