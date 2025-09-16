@@ -61,7 +61,7 @@ try:
             yaxis_title="Price",
             template="plotly_dark",
             hovermode='x unified',
-            rangeslider=dict(visible=False)
+            xaxis_rangeslider_visible=False
         )
 
         st.plotly_chart(fig, use_container_width=True)
